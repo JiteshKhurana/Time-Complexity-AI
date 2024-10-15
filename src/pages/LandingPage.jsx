@@ -66,7 +66,7 @@ export default function LandingPage() {
               transition={{ duration: 0.5, type: "spring", stiffness: 100 }}
               className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600"
             >
-              TimeComplexityAI
+              TimeComplexity.AI
             </motion.h1>
           </header>
 
