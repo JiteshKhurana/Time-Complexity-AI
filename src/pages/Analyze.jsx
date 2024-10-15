@@ -21,8 +21,7 @@ export default function Analyze() {
     const options = {
       method: "POST",
       headers: {
-        Authorization:
-          "Bearer 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",
+        Authorization: `Bearer ${import.meta.env.VITE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -155,7 +154,11 @@ export default function Analyze() {
           >
             Analyze Code
           </Button>
-          {showConfetti && <Confetti width={width} height={height} />}
+          {showConfetti && (
+            <div className="fixed inset-0 pointer-events-none">
+              <Confetti width={width} height={height} />
+            </div>
+          )}
         </div>
 
         {analysis && (
