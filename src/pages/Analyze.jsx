@@ -1,39 +1,85 @@
-"use client";
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Code, Clock, Zap } from "lucide-react";
+import useWindowSize from "react-use/lib/useWindowSize";
+import Confetti from "react-confetti";
+import { ColorRing } from "react-loader-spinner";
 
 export default function Analyze() {
   const [code, setCode] = useState("");
-  const [language, setLanguage] = useState("python");
-  const [inputSize, setInputSize] = useState("");
+  const [constraints, setConstraints] = useState("");
   const [timeLimit, setTimeLimit] = useState("");
   const [analysis, setAnalysis] = useState(null);
+  const { width, height } = useWindowSize();
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [isLoading, SetIsLoading] = useState(false);
+  const analyzeCode = async (code, constraints, timeLimit) => {
+    const options = {
+      method: "POST",
+      headers: {
+        Authorization:
+          "Bearer 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",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "llama-3.1-sonar-large-128k-online",
+        messages: [
+          {
+            role: "system",
+            content:
+              'give final result in the following json format.Just give json format only and no other thing and TLE prediction should be strictly according to the given constraints and time limit.format is {   "timeComplexity": "O(n^2)",   "spaceComplexity": "O(n)",   "explanation": "The nested loops in the code lead to a quadratic time complexity. For each iteration of the outer loop, the inner loop iterates over all elements, resulting in n * n operations.",   "tlePrediction": {     "willTLE": "Yes",     "reason": "Given the constraints and a time limit of 1 second, the code performs O(n^2) operations. For n = 10^5, this results in 10^10 operations, which exceeds the 10^8 operations that can be performed in 1 second."   } }',
+          },
+          {
+            role: "user",
+            content: `Code: ${code}\nConstraints: ${constraints}\nTime limit: ${timeLimit}`,
+          },
+        ],
+      }),
+    };
 
-  const analyzeCode = async () => {
-    // Simulating API call to AI service
-    setAnalysis({
-      timeComplexity: "O(n^2)",
-      spaceComplexity: "O(n)",
-      explanation:
-        "The nested loops in your code result in a quadratic time complexity. For each element in the outer loop, the inner loop iterates through all elements, leading to n * n operations.",
-      tlePrediction:
-        "Your code may exceed the time limit for input sizes larger than 10^5 elements.",
-    });
+    try {
+      SetIsLoading(true);
+      const response = await fetch(
+        "https://api.perplexity.ai/chat/completions",
+        options
+      );
+      const data = await response.json();
+      console.log(data.choices[0].message.content);
+      const analysisContent = data.choices[0].message.content
+        .replace(/```json\n|```/g, "")
+        .trim();
+      const parsedAnalysis = JSON.parse(analysisContent);
+      setAnalysis(parsedAnalysis);
+      SetIsLoading(false);
+      setShowConfetti(true);
+      setTimeout(() => {
+        setShowConfetti(false); // Hide confetti after 3 seconds
+      }, 6000);
+    } catch (error) {
+      console.error("Error:", error);
+      setAnalysis(null);
+    }
   };
-
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-800 text-white flex flex-col items-center justify-center">
+        <h1 className="text-6xl">Doing AI magic✨ for you</h1>
+        <ColorRing
+          visible={true}
+          height="80"
+          width="80"
+          ariaLabel="color-ring-loading"
+          wrapperStyle={{}}
+          wrapperClass="color-ring-wrapper"
+          colors={["#e15b64", "#f47e60", "#f8b26a", "#abbd81", "#849b87"]}
+        />
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-800 text-white overflow-hidden">
       <header className="container mx-auto px-4 py-8">
@@ -74,12 +120,12 @@ export default function Analyze() {
               <div className="grid gap-6">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="input-size" className="text-right text-white">
-                    Input Size
+                    Constraints
                   </Label>
                   <Textarea
                     id="input-size"
-                    value={inputSize}
-                    onChange={(e) => setInputSize(e.target.value)}
+                    value={constraints}
+                    onChange={(e) => setConstraints(e.target.value)}
                     placeholder="e.g., 10^5"
                     className="col-span-3 bg-white/5 border-0 placeholder-gray-400 text-white min-h-[100px]"
                   />
@@ -104,11 +150,12 @@ export default function Analyze() {
         <div className="flex justify-center mb-12">
           <Button
             size="lg"
-            onClick={analyzeCode}
+            onClick={() => analyzeCode(code, constraints, timeLimit)}
             className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold py-3 px-8 rounded-full transition-all duration-300"
           >
             Analyze Code
           </Button>
+          {showConfetti && <Confetti width={width} height={height} />}
         </div>
 
         {analysis && (
@@ -127,7 +174,9 @@ export default function Analyze() {
                       <h3 className="text-lg font-semibold text-white">
                         Time Complexity
                       </h3>
-                      <p className="text-gray-200">{analysis.timeComplexity}</p>
+                      <p className="text-gray-200">
+                        {analysis?.timeComplexity}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
@@ -137,7 +186,7 @@ export default function Analyze() {
                         Space Complexity
                       </h3>
                       <p className="text-gray-200">
-                        {analysis.spaceComplexity}
+                        {analysis?.spaceComplexity}
                       </p>
                     </div>
                   </div>
@@ -148,12 +197,14 @@ export default function Analyze() {
                     <p className="text-gray-200">{analysis.explanation}</p>
                   </div>
                   <div className="flex items-center gap-4">
-                    <Zap className="h-8 w-8 text-yellow-400" />
+                    <Zap className="h-16 w-16 text-yellow-400" />
                     <div>
                       <h3 className="text-lg font-semibold text-white">
-                        TLE Prediction
+                        TLE - {analysis?.tlePrediction?.willTLE}
                       </h3>
-                      <p className="text-gray-200">{analysis.tlePrediction}</p>
+                      <p className="text-gray-200">
+                        {analysis?.tlePrediction?.reason}
+                      </p>
                     </div>
                   </div>
                 </div>
